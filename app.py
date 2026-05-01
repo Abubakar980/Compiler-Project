@@ -428,7 +428,7 @@ def analyzer():
     )
 
 
-if __name__ == '__main__':
-    print("Server is working...")
-    print("open in browser: http://localhost:5000")
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     print("Server is working...")
+#     print("open in browser: http://localhost:5000")
+#     app.run(debug=True)
