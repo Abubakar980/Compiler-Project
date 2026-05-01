@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W++ Token Analyzer &mdash; Analyze</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 100%);
+            --card-bg: #1e293b;
+            --card-border: rgba(255, 255, 255, 0.1);
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.5);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --btn-primary: #6366f1;
+            --btn-primary-hover: #818cf8;
+            --btn-secondary: #475569;
+            --btn-secondary-hover: #334155;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --cursor-color: #f8fafc;
+            --input-bg: rgba(15, 23, 42, 0.8);
+            --input-border: #334155;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #e0e7ff 0%, #f1f5f9 100%);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --accent: #4f46e5;
+            --accent-glow: rgba(79, 70, 229, 0.2);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --btn-primary: #4f46e5;
+            --btn-primary-hover: #4338ca;
+            --btn-secondary: #94a3b8;
+            --btn-secondary-hover: #64748b;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --cursor-color: #0f172a;
+            --input-bg: rgba(255, 255, 255, 0.9);
+            --input-border: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            cursor: none !important;
+        }
+
+        #gb-cursor, #gb-cursor-text { transition: none !important; }
+
+        html, body {
+            cursor: none !important;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        /* ─── Scroll Progress Bar ─── */
+        #top-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 4px;
+            background: linear-gradient(to right, #4f46e5, #ec4899, #06b6d4);
+            z-index: 9999;
+            transition: width 0.1s ease-out;
+        }
+
+        /* ─── Custom Cursor ─── */
+        #gb-cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--cursor-color);
+            background-color: transparent;
+            display: grid;
+            place-items: center;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        #gb-cursor-text {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--cursor-color);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* ─── Theme Toggle ─── */
+        .theme-toggle {
+            position: fixed; top: 20px; right: 20px;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            padding: 10px 15px; border-radius: 12px; backdrop-filter: blur(10px);
+            z-index: 1000; display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+        }
+        .theme-switch { position: relative; width: 44px; height: 22px; cursor: pointer; }
+        .theme-switch input { display: none; }
+        .theme-slider {
+            position: absolute; inset: 0; background: #475569;
+            border-radius: 20px; transition: 0.3s;
+        }
+        .theme-slider:before {
+            content: ""; position: absolute; height: 16px; width: 16px;
+            left: 3px; bottom: 3px; background: white;
+            border-radius: 50%; transition: 0.3s;
+        }
+        input:checked + .theme-slider { background: #6366f1; }
+        input:checked + .theme-slider:before { transform: translateX(22px); }
+
+        /* ─── Home Button ─── */
+        .home-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 9px 16px;
+            border-radius: 50px;
+            border: 1px solid var(--card-border);
+            font-size: 0.88rem;
+            font-weight: 600;
+            z-index: 100;
+            transition: all 0.2s;
+        }
+
+        .home-btn:hover {
+            background: var(--btn-primary);
+            color: white;
+            border-color: var(--btn-primary);
+        }
+
+        /* ─── Header ─── */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+            margin-top: 30px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(to right, #4f46e5, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-top: 10px;
+        }
+
+        /* ─── Glass Panel ─── */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 25px 50px -12px var(--shadow-color);
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: '';
+            display: block;
+            width: 8px; height: 24px;
+            background: var(--btn-primary);
+            border-radius: 4px;
+        }
+
+        .form-group { margin-bottom: 25px; }
+
+        label {
+            display: block;
+            font-size: 0.93rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        /* ─── Custom File Drop Zone ─── */
+        .file-zone {
+            position: relative;
+            border: 2px dashed var(--input-border);
+            border-radius: 16px;
+            padding: 36px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--input-bg);
+            transition: all 0.3s ease;
+        }
+
+        .file-zone:hover {
+            border-color: var(--btn-primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .file-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .file-zone .zone-icon {
+            margin: 0 auto 12px;
+            width: 52px; height: 52px;
+            background: rgba(79, 70, 229, 0.1);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--btn-primary);
+            transition: transform 0.3s;
+        }
+
+        .file-zone:hover .zone-icon { transform: scale(1.08); }
+
+        .zone-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .zone-hint {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+
+        /* Valid state */
+        .file-zone.zone-valid {
+            border-color: #22c55e;
+            border-style: solid;
+            background: rgba(34, 197, 94, 0.08);
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.15);
+        }
+
+        .file-zone.zone-valid .zone-icon {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        /* Invalid state */
+        .file-zone.zone-invalid {
+            border-color: #ef4444;
+            border-style: solid;
+            background: rgba(239, 68, 68, 0.08);
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .file-zone.zone-invalid .zone-icon {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .zone-filename {
+            display: none;
+            margin-top: 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 8px 16px;
+            border-radius: 8px;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .zone-filename.show { display: flex; }
+        .zone-filename.fname-ok  { color: #22c55e; background: rgba(34,197,94,0.1); }
+        .zone-filename.fname-err { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+        /* ─── Divider ─── */
+        .divider {
+            display: flex;
+            align-items: center;
+            color: var(--text-secondary);
+            margin: 28px 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--input-border);
+        }
+
+        .divider:not(:empty)::before { margin-right: .4em; }
+        .divider:not(:empty)::after  { margin-left: .4em; }
+
+        /* ─── Textarea ─── */
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--btn-primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+
+        /* ─── Buttons ─── */
+        .btn-group {
+            display: flex;
+            gap: 14px;
+            margin-top: 28px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary {
+            background-color: var(--btn-primary);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--btn-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-primary);
+            border: 2px solid var(--input-border);
+        }
+
+        /* ─── Fix System Cursor Visibility ─── */
+        a, button, .btn, .theme-switch, input, textarea, .file-zone, label, .home-btn, .theme-switch-wrapper {
+            cursor: none !important;
+        }
+
+        /* ─── Error Message ─── */
+        .error-msg {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            color: #ef4444;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 22px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60%      { transform: translate3d(4px, 0, 0); }
+        }
+
+        ::-webkit-scrollbar { width: 0px; }
+    </style>
+</head>
+<body>
+
+    <!-- Scroll Progress -->
+    <div id="top-progress"></div>
+
+    <!-- Custom Cursor -->
+    <div id="gb-cursor">
+        <div id="gb-cursor-text"></div>
+    </div>
+
+    <!-- Home Button -->
+    <a href="{{ url_for('home') }}" class="home-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Home
+    </a>
+
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <span style="font-size:0.7rem; font-weight:900; font-family:'JetBrains Mono';">THEME</span>
+        <label class="theme-switch">
+            <input type="checkbox" id="theme-chk" checked>
+            <span class="theme-slider"></span>
+        </label>
+    </div>
+
+    <div class="header">
+        <h1>W++ Token Analyzer</h1>
+        <p>Analyze your source code for tokens and metrics</p>
+    </div>
+
+    <div class="glass-panel">
+        <h2>Input Source Code</h2>
+
+        <form method="POST" action="{{ url_for('analyzer') }}" enctype="multipart/form-data" id="analyzeForm">
+
+            <div class="form-group">
+                <label>Upload Source File (.txt, .wpp, .cpp)</label>
+
+                <div class="file-zone" id="dropZone">
+                    <input type="file" id="fileInput" name="wpp_file" accept=".txt,.wpp,.cpp,.c">
+                    <div id="zoneBody">
+                        <div class="zone-icon">
+                            <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                        </div>
+                        <div class="zone-title">Click to browse or drag &amp; drop</div>
+                        <div class="zone-hint" style="margin-top: 10px; font-size: 0.8rem; opacity: 0.8;">
+                            Accepted: .wpp .cpp .txt .docs .js .py .java .c .h .cs .ts and more code files  |  <span style="color: #ef4444; font-weight: 700;">✕ .pdf not allowed</span>
+                        </div>
+                    </div>
+                    <div class="zone-filename" id="zoneFilename"></div>
+                </div>
+            </div>
+
+            <div class="divider">OR</div>
+
+            <div class="form-group">
+                <label>Paste Code Directly</label>
+                <textarea name="source_code" placeholder="int main() { ... }"></textarea>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary" id="analyzeBtn">Analyze Code</button>
+                <button type="reset" class="btn btn-secondary" id="clearBtn">Clear</button>
+            </div>
+
+        </form>
+
+        {% if error %}
+        <div class="error-msg">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            {{ error }}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        // Theme Logic
+        const chk = document.getElementById('theme-chk');
+        const root = document.documentElement;
+        
+        const currentSavedTheme = localStorage.getItem('theme') || 'dark';
+        root.setAttribute('data-theme', currentSavedTheme);
+        chk.checked = (currentSavedTheme === 'dark');
+
+        chk.addEventListener('change', () => {
+            const isDark = chk.checked;
+            root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        /* ── File Validation & Auto-Submit ── */
+        const VALID_EXTS = ['wpp', 'txt', 'cpp', 'c'];
+        const fileInput    = document.getElementById('fileInput');
+        const dropZone     = document.getElementById('dropZone');
+        const zoneFilename = document.getElementById('zoneFilename');
+        const analyzeForm  = document.getElementById('analyzeForm');
+
+        fileInput.addEventListener('change', function () {
+            if (!this.files.length) return;
+            const file = this.files[0];
+            const ext  = file.name.split('.').pop().toLowerCase();
+            const ok   = (ext !== 'pdf'); 
+
+            dropZone.classList.remove('zone-valid', 'zone-invalid');
+            dropZone.classList.add(ok ? 'zone-valid' : 'zone-invalid');
+
+            zoneFilename.classList.remove('fname-ok', 'fname-err');
+            zoneFilename.classList.add('show', ok ? 'fname-ok' : 'fname-err');
+            zoneFilename.innerHTML = (ok ? '✓' : '✕') + ' ' + file.name + (ok ? '' : ' (Unsupported)');
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            fileInput.value = '';
+            dropZone.classList.remove('zone-valid', 'zone-invalid');
+            zoneFilename.classList.remove('show', 'fname-ok', 'fname-err');
+            zoneFilename.innerHTML = '';
+        });
+
+        /* ── Custom Cursor (GSAP) ── */
+        const cursor = document.getElementById('gb-cursor');
+        const cursorText = document.getElementById('gb-cursor-text');
+        const mouse = { x: 0, y: 0 };
+        const smoothMouse = { x: 0, y: 0 };
+        const mouseVelocity = { x: 0, y: 0 };
+        const lerp = (x, y, a) => x * (1 - a) + y * a;
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        window.addEventListener('mousedown', () => {
+            gsap.to(cursorText, { scale: 2.5, duration: 0.15, ease: "power2.out" });
+        });
+
+        window.addEventListener('mouseup', () => {
+            gsap.to(cursorText, { scale: 1, duration: 0.15, ease: "power2.out" });
+        });
+
+        const setter = {
+            x: gsap.quickSetter(cursor, 'x', 'px'),
+            y: gsap.quickSetter(cursor, 'y', 'px'),
+            scaleY: gsap.quickSetter(cursor, 'scaleY'),
+            scaleX: gsap.quickSetter(cursor, 'scaleX'),
+            rotation: gsap.quickSetter(cursor, 'rotation', 'deg'),
+            wc: gsap.quickSetter(cursor, 'willChange'),
+            textRotation: gsap.quickSetter(cursorText, 'rotation', 'deg'),
+        };
+
+        gsap.ticker.add(() => {
+            smoothMouse.x = lerp(smoothMouse.x, mouse.x, 0.15);
+            smoothMouse.y = lerp(smoothMouse.y, mouse.y, 0.15);
+
+            mouseVelocity.x = Math.abs(mouse.x - smoothMouse.x);
+            mouseVelocity.y = Math.abs(mouse.y - smoothMouse.y);
+
+            const angle = Math.atan2(mouse.y - smoothMouse.y, mouse.x - smoothMouse.x) * (180 / Math.PI);
+            const scaleAmount = Math.min((mouseVelocity.x + mouseVelocity.y) * 0.0035, 0.5);
+
+            setter.x(smoothMouse.x);
+            setter.y(smoothMouse.y);
+            setter.scaleY(1 - scaleAmount);
+            setter.scaleX(1 + scaleAmount);
+            setter.rotation(angle);
+            setter.wc('transform');
+            setter.textRotation(-angle);
+        });
+
+        /* ── Top Progress Bar ── */
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+            document.getElementById("top-progress").style.width = scrolled + "%";
+        });
+    </script>
+</body>
+</html>
