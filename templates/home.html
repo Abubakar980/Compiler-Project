@@ -197,6 +197,27 @@
             box-shadow: 0 18px 40px rgba(79, 70, 229, 0.55);
         }
 
+        .hero-btn-outline {
+            background: transparent;
+            border: 2px solid var(--btn-primary);
+            color: var(--btn-primary);
+            box-shadow: none;
+            animation: none;
+        }
+
+        .hero-btn-outline:hover {
+            background: var(--btn-primary);
+            color: white;
+            box-shadow: 0 18px 40px rgba(79, 70, 229, 0.55);
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
         @keyframes pulseBtn {
             0%, 100% { box-shadow: 0 12px 32px rgba(79, 70, 229, 0.38); }
             50%       { box-shadow: 0 12px 45px rgba(79, 70, 229, 0.65); }
@@ -374,17 +395,25 @@
         <!-- Hero -->
         <section class="hero">
             <div class="hero-badge">Compiler Construction &mdash; Semester 6 &mdash; Project Submission</div>
-            <h1>W++ Token Analyzer</h1>
+            <h1>W++ Compiler</h1>
             <p>
-                An advanced lexical analysis engine for the W++ programming language.
-                Upload your source file and get a comprehensive statistical breakdown.
+                A complete compiler for the W++ programming language — from lexical scanning
+                to syntax parsing and AST generation. Choose your module below.
             </p>
-            <a href="{{ url_for('analyzer') }}" class="hero-btn">
-                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-                Start Analyzer
-            </a>
+            <div class="hero-btns">
+                <a href="{{ url_for('analyzer') }}" class="hero-btn">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Scanner
+                </a>
+                <a href="{{ url_for('parser_view') }}" class="hero-btn hero-btn-outline">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                    </svg>
+                    Parser
+                </a>
+            </div>
         </section>
 
         <!-- Team -->

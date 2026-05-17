@@ -2,8 +2,18 @@ from flask import Flask, render_template, request, redirect, url_for
 from collections import defaultdict
 import re
 import os
+import json
+import importlib.util as _ilu
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
+
+import sys as _sys
+_pspec = _ilu.spec_from_file_location("wpp_parser", os.path.join(_BASE, "parser.py"))
+_pmod  = _ilu.module_from_spec(_pspec)
+_sys.modules["wpp_parser"] = _pmod
+_pspec.loader.exec_module(_pmod)
+wpp_parse = _pmod.parse
+
 app = Flask(__name__, template_folder=os.path.join(_BASE, 'templates'))
 
 keywords_list = {
@@ -22,8 +32,13 @@ keywords_list = {
     'read'   : 'KEYWORD_READ',
     'true'   : 'KEYWORD_TRUE',
     'false'  : 'KEYWORD_FALSE',
+    'do'     : 'KEYWORD_DO',
+    'void'   : 'KEYWORD_VOID',
+    'long'   : 'KEYWORD_LONG',
 }
 two_char_ops = {
+    '++': 'OPERATOR_INCREMENT',
+    '--': 'OPERATOR_DECREMENT',
     '==': 'OPERATOR_EQ',
     '!=': 'OPERATOR_NEQ',
     '<=': 'OPERATOR_LTE',
@@ -60,7 +75,7 @@ TOKEN_PATTERN = re.compile(
     r'(?P<CHAR>        \'(?:\\.|[^\\\'])?\'     )|'
     r'(?P<FLOAT>       \d+\.\d+                 )|'
     r'(?P<INTEGER>     \d+                      )|'
-    r'(?P<OP2>         ==|!=|<=|>=|&&|\|\|      )|'
+    r'(?P<OP2>         \+\+|--|==|!=|<=|>=|&&|\|\|  )|'
     r'(?P<OP1>         [=+\-*/%<>!]             )|'
     r'(?P<SEPARATOR>   [;,(){}\[\]]             )|'
     r'(?P<IDENTIFIER>  [a-zA-Z_]\w*             )|'
@@ -428,7 +443,50 @@ def analyzer():
     )
 
 
-# if __name__ == '__main__':
-#     print("Server is working...")
-#     print("open in browser: http://localhost:5000")
-#     app.run(debug=True)
+@app.route('/parser', methods=['GET', 'POST'])
+def parser_view():
+    if request.method == 'GET':
+        error = request.args.get('error')
+        return render_template('parser_input.html', error=error)
+
+    source   = ''
+    filename = '(pasted code)'
+
+    if 'wpp_file' in request.files and request.files['wpp_file'].filename != '':
+        uploaded = request.files['wpp_file']
+        try:
+            source   = uploaded.read().decode('utf-8')
+            filename = uploaded.filename
+        except UnicodeDecodeError:
+            return redirect(url_for('parser_view',
+                error='Error: Please upload a valid text/code file.'))
+    else:
+        source = request.form.get('source_code', '')
+
+    if source.strip() == '':
+        return redirect(url_for('parser_view', error='No code found.'))
+
+    all_tokens   = tokenize(source)
+    source_lines = source.split('\n')
+    non_cmt      = [t for t in all_tokens if t['category'] != 'COMMENT']
+
+    ast_node, errors = wpp_parse(all_tokens)
+
+    error_lines = {e.line for e in errors}
+    errors_data = [e.to_dict() for e in errors]
+
+    return render_template('parser_result.html',
+        filename    = filename,
+        token_count = len(non_cmt),
+        errors      = errors_data,
+        error_count = len(errors_data),
+        ast_json    = json.dumps(ast_node.to_dict()),
+        source_lines= source_lines,
+        error_lines = error_lines,
+    )
+
+
+if __name__ == '__main__':
+    print("Server is working...")
+    print("Open in browser: http://localhost:5000")
+    app.run(debug=True)

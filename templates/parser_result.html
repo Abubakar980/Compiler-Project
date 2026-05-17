@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W++ Parser &mdash; Syntax Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f172a 100%);
+            --card-bg: #1e293b;
+            --card-border: rgba(255, 255, 255, 0.1);
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.5);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --table-head: #6366f1;
+            --metric-card-bg: #0f172a;
+            --summary-item-bg: #0f172a;
+            --cursor-color: #f8fafc;
+            --tree-branch: rgba(255, 255, 255, 0.08);
+            --tree-hover: rgba(255, 255, 255, 0.04);
+            --code-bg: #0f172a;
+            --error-line-bg: rgba(239, 68, 68, 0.12);
+            --error-line-border: rgba(239, 68, 68, 0.5);
+        }
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #e0e7ff 0%, #f1f5f9 100%);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --accent: #4f46e5;
+            --accent-glow: rgba(79, 70, 229, 0.2);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --table-head: #4f46e5;
+            --metric-card-bg: #ffffff;
+            --summary-item-bg: #f8fafc;
+            --cursor-color: #0f172a;
+            --tree-branch: rgba(0, 0, 0, 0.1);
+            --tree-hover: rgba(0, 0, 0, 0.03);
+            --code-bg: #f8fafc;
+            --error-line-bg: rgba(239, 68, 68, 0.08);
+            --error-line-border: rgba(239, 68, 68, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; cursor: none !important; }
+        #gb-cursor, #gb-cursor-text { transition: none !important; }
+        html, body { cursor: none !important; scroll-behavior: smooth; }
+        html { scrollbar-width: none; -ms-overflow-style: none; }
+        html::-webkit-scrollbar { display: none; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 10px; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            background-attachment: fixed;
+        }
+
+        #top-progress {
+            position: fixed; top: 0; left: 0; width: 0%; height: 4px;
+            background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+            z-index: 10000;
+        }
+        #gb-cursor {
+            position: fixed; top: 0; left: 0; width: 38px; height: 38px;
+            border-radius: 50%; border: 2px solid var(--cursor-color);
+            pointer-events: none; z-index: 10001;
+            display: grid; place-items: center;
+            transform: translate(-50%, -50%);
+        }
+        #gb-cursor-text {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--cursor-color);
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .theme-toggle {
+            position: fixed; top: 30px; right: 30px;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            padding: 10px 15px; border-radius: 12px; backdrop-filter: blur(10px);
+            z-index: 1000; display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .theme-switch { position: relative; width: 44px; height: 22px; }
+        .theme-switch input { display: none; }
+        .theme-slider { position: absolute; inset: 0; background: #475569; border-radius: 20px; transition: 0.3s; }
+        .theme-slider:before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        input:checked + .theme-slider { background: #6366f1; }
+        input:checked + .theme-slider:before { transform: translateX(22px); }
+
+        .container { max-width: 1100px; margin: 0 auto; animation: zoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        .main-title {
+            text-align: center; font-size: 2.5rem; font-weight: 900;
+            color: #a78bfa; text-transform: uppercase; letter-spacing: 2px;
+            margin-bottom: 40px; text-shadow: 0 0 20px rgba(167,139,250,0.3);
+        }
+
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #6366f1; color: white;
+            padding: 10px 20px; border-radius: 10px;
+            text-decoration: none; font-weight: 700; font-size: 0.9rem;
+            margin-bottom: 30px; box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+        }
+
+        /* ── Info Bar ── */
+        .info-bar {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 16px; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;
+            flex-wrap: wrap; gap: 10px;
+        }
+        .info-label { color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-right: 8px; }
+        .info-val   { color: var(--accent); font-weight: 700; }
+        .status-pass { background: rgba(34,197,94,0.15); color: #22c55e; padding: 4px 14px; border-radius: 50px; font-weight: 800; border: 1px solid rgba(34,197,94,0.3); }
+        .status-fail { background: rgba(239,68,68,0.15); color: #ef4444; padding: 4px 14px; border-radius: 50px; font-weight: 800; border: 1px solid rgba(239,68,68,0.3); }
+
+        /* ── Section ── */
+        .section {
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 20px; padding: 30px; margin-bottom: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 25px; }
+        .section-num {
+            background: var(--metric-card-bg); color: var(--accent);
+            width: 28px; height: 28px; border-radius: 6px;
+            display: grid; place-items: center; font-weight: 900; font-size: 0.85rem;
+            border: 1px solid var(--card-border);
+        }
+        .section-title { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); }
+
+        /* ── No Errors Banner ── */
+        .success-banner {
+            display: flex; align-items: center; gap: 18px;
+            background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 14px; padding: 22px 28px;
+        }
+        .success-icon { font-size: 2rem; }
+        .success-title { font-size: 1.1rem; font-weight: 800; color: #22c55e; }
+        .success-sub   { font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px; }
+
+        /* ── Errors Table ── */
+        .table-container { border-radius: 12px; overflow: hidden; border: 1px solid var(--card-border); }
+        table { width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; }
+        th { background: #ef4444; color: white; text-align: left; padding: 14px 16px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+        td { background: var(--card-bg); padding: 12px 16px; border-bottom: 1px solid var(--card-border); font-size: 0.88rem; font-weight: 600; }
+        tr:last-child td { border-bottom: none; }
+        .err-num   { color: #ef4444; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+        .err-loc   { color: #fb923c; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; white-space: nowrap; }
+        .err-msg   { color: var(--text-primary); }
+
+        /* ── AST Tree ── */
+        .tree-toolbar {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+            align-items: center; justify-content: space-between;
+        }
+        .tree-info { font-size: 0.82rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; }
+        .tree-btns { display: flex; gap: 8px; }
+        .tree-btn {
+            padding: 6px 14px; font-size: 0.8rem; font-weight: 700;
+            border: 1px solid var(--card-border); border-radius: 8px;
+            background: var(--metric-card-bg); color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .tree-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        #ast-tree {
+            max-height: 560px; overflow-y: auto;
+            padding: 10px 0;
+            scrollbar-width: thin; scrollbar-color: #6366f1 transparent;
+        }
+        #ast-tree::-webkit-scrollbar { width: 5px; }
+        #ast-tree::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 10px; }
+
+        .tree-node { margin: 1px 0; }
+        .tree-label {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+            transition: background 0.15s; user-select: none;
+        }
+        .tree-label.clickable:hover { background: var(--tree-hover); }
+        .tree-label.clickable { cursor: none; }
+        .tree-children {
+            margin-left: 22px;
+            border-left: 1px solid var(--tree-branch);
+            padding-left: 14px;
+        }
+        .tree-arrow {
+            display: inline-block; color: var(--text-secondary);
+            font-size: 0.7rem; width: 12px; text-align: center;
+            transition: transform 0.2s; flex-shrink: 0;
+        }
+        .tree-arrow.open  { transform: rotate(0deg); }
+        .tree-arrow.shut  { transform: rotate(-90deg); }
+        .tree-leaf { color: var(--tree-branch); font-size: 0.7rem; width: 12px; text-align: center; flex-shrink: 0; }
+        .tree-type { font-weight: 700; }
+        .tree-val  { color: var(--text-secondary); font-size: 0.8rem; }
+        .tree-val code {
+            color: #fb923c; background: rgba(251,146,60,0.12);
+            padding: 1px 5px; border-radius: 4px; font-size: 0.78rem;
+        }
+        .tree-line {
+            color: var(--text-secondary); font-size: 0.72rem;
+            margin-left: auto; white-space: nowrap;
+            background: var(--metric-card-bg); padding: 1px 6px;
+            border-radius: 4px; border: 1px solid var(--card-border);
+        }
+
+        /* ── Source Code Viewer ── */
+        .source-wrap {
+            background: var(--code-bg); border-radius: 14px;
+            overflow: hidden; border: 1px solid var(--card-border);
+        }
+        .source-lines {
+            max-height: 500px; overflow-y: auto;
+            scrollbar-width: thin; scrollbar-color: #6366f1 transparent;
+        }
+        .source-lines::-webkit-scrollbar { width: 5px; }
+        .source-lines::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 10px; }
+        .src-line {
+            display: flex; align-items: stretch;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+            min-height: 28px;
+        }
+        .src-line.has-error {
+            background: var(--error-line-bg);
+            border-left: 3px solid #ef4444;
+        }
+        .src-line:not(.has-error) { border-left: 3px solid transparent; }
+        .src-num {
+            min-width: 50px; padding: 4px 12px;
+            color: var(--text-secondary); text-align: right;
+            background: rgba(0,0,0,0.15); border-right: 1px solid var(--card-border);
+            flex-shrink: 0; line-height: 20px; padding-top: 4px;
+            user-select: none;
+        }
+        .src-line.has-error .src-num { color: #ef4444; font-weight: 800; }
+        .src-code { padding: 4px 16px; color: var(--text-primary); white-space: pre; flex: 1; line-height: 20px; }
+        .src-line.has-error .src-code { color: var(--text-primary); }
+        .src-err-indicator {
+            padding: 4px 10px; color: #ef4444; flex-shrink: 0;
+            font-size: 0.7rem; font-weight: 800; white-space: nowrap;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        .footer { text-align: center; margin-top: 60px; padding-bottom: 40px; color: var(--text-secondary); font-weight: 800; font-size: 0.9rem; letter-spacing: 2px; }
+
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        @media print {
+            * { cursor: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #top-progress, #gb-cursor, .theme-toggle, .back-btn { display: none !important; }
+            body { background: #fff !important; color: #000 !important; padding: 10px !important; }
+            .container { max-width: 100% !important; animation: none !important; }
+            .section { break-inside: avoid; box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="top-progress"></div>
+<div id="gb-cursor"><div id="gb-cursor-text"></div></div>
+
+<div class="theme-toggle">
+    <span style="font-size:0.7rem; font-weight:900; font-family:'JetBrains Mono';">THEME</span>
+    <label class="theme-switch">
+        <input type="checkbox" id="theme-chk" checked>
+        <span class="theme-slider"></span>
+    </label>
+</div>
+
+<div class="container">
+
+    <h1 class="main-title">Syntax Analysis Report</h1>
+
+    <a href="{{ url_for('parser_view') }}" class="back-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Parse Another File
+    </a>
+
+    <!-- INFO BAR -->
+    <div class="info-bar">
+        <div><span class="info-label">FILE</span><span class="info-val">{{ filename }}</span></div>
+        <div><span class="info-label">TOKENS</span><span class="info-val">{{ token_count }}</span></div>
+        <div><span class="info-label">ERRORS</span><span class="info-val">{{ error_count }}</span></div>
+        <div>
+            <span class="info-label">STATUS</span>
+            {% if error_count == 0 %}
+            <span class="status-pass">✓ PASSED</span>
+            {% else %}
+            <span class="status-fail">✗ FAILED</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SECTION 1: SYNTAX ERRORS -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-num">1</div>
+            <h2 class="section-title">Syntax Errors</h2>
+        </div>
+
+        {% if error_count == 0 %}
+        <div class="success-banner">
+            <div class="success-icon">✅</div>
+            <div>
+                <div class="success-title">No Syntax Errors Found</div>
+                <div class="success-sub">The source code passed all syntax checks successfully.</div>
+            </div>
+        </div>
+        {% else %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:50px">#</th>
+                        <th style="width:140px">LOCATION</th>
+                        <th>ERROR MESSAGE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for err in errors %}
+                    <tr>
+                        <td class="err-num">{{ loop.index }}</td>
+                        <td class="err-loc">Line {{ err.line }}{% if err.column %}, Col {{ err.column }}{% endif %}</td>
+                        <td class="err-msg">{{ err.message }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- SECTION 2: AST TREE -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-num">2</div>
+            <h2 class="section-title">Abstract Syntax Tree (AST)</h2>
+        </div>
+        <div class="tree-toolbar">
+            <div class="tree-info" id="tree-info">Loading tree…</div>
+            <div class="tree-btns">
+                <button class="tree-btn" onclick="expandAll()">Expand All</button>
+                <button class="tree-btn" onclick="collapseAll()">Collapse All</button>
+            </div>
+        </div>
+        <div id="ast-tree"></div>
+    </div>
+
+    <!-- SECTION 3: SOURCE CODE -->
+    <div class="section">
+        <div class="section-header">
+            <div class="section-num">3</div>
+            <h2 class="section-title">Source Code
+                {% if error_count > 0 %}
+                <span style="font-size:0.8rem; font-weight:600; color:#ef4444; margin-left:8px;">
+                    ({{ error_count }} error line{{ 's' if error_count != 1 else '' }} highlighted)
+                </span>
+                {% endif %}
+            </h2>
+        </div>
+        <div class="source-wrap">
+            <div class="source-lines">
+                {% set error_line_set = error_lines %}
+                {% for line in source_lines %}
+                {% set ln = loop.index %}
+                <div class="src-line {% if ln in error_line_set %}has-error{% endif %}">
+                    <div class="src-num">{{ ln }}</div>
+                    <div class="src-code">{{ line if line else ' ' }}</div>
+                    {% if ln in error_line_set %}
+                    <div class="src-err-indicator">⚠ error</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">— END OF SYNTAX REPORT —</div>
+
+</div>
+
+<script>
+    /* ── Theme ── */
+    const chk  = document.getElementById('theme-chk');
+    const root = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    root.setAttribute('data-theme', savedTheme);
+    chk.checked = (savedTheme === 'dark');
+    chk.addEventListener('change', () => {
+        const isDark = chk.checked;
+        root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    /* ── Custom Cursor ── */
+    const cursor     = document.getElementById('gb-cursor');
+    const cursorText = document.getElementById('gb-cursor-text');
+    const mouse = { x: 0, y: 0 };
+    const smoothMouse = { x: 0, y: 0 };
+    const mouseVelocity = { x: 0, y: 0 };
+    const lerp = (x, y, a) => x * (1 - a) + y * a;
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    window.addEventListener('mousedown', () => gsap.to(cursorText, { scale: 2.5, duration: 0.15, ease: "power2.out" }));
+    window.addEventListener('mouseup',   () => gsap.to(cursorText, { scale: 1,   duration: 0.15, ease: "power2.out" }));
+    const setter = {
+        x: gsap.quickSetter(cursor, 'x', 'px'), y: gsap.quickSetter(cursor, 'y', 'px'),
+        scaleY: gsap.quickSetter(cursor, 'scaleY'), scaleX: gsap.quickSetter(cursor, 'scaleX'),
+        rotation: gsap.quickSetter(cursor, 'rotation', 'deg'),
+        wc: gsap.quickSetter(cursor, 'willChange'),
+        textRotation: gsap.quickSetter(cursorText, 'rotation', 'deg'),
+    };
+    gsap.ticker.add(() => {
+        smoothMouse.x = lerp(smoothMouse.x, mouse.x, 0.15);
+        smoothMouse.y = lerp(smoothMouse.y, mouse.y, 0.15);
+        mouseVelocity.x = Math.abs(mouse.x - smoothMouse.x);
+        mouseVelocity.y = Math.abs(mouse.y - smoothMouse.y);
+        const angle = Math.atan2(mouse.y - smoothMouse.y, mouse.x - smoothMouse.x) * (180 / Math.PI);
+        const scaleAmount = Math.min((mouseVelocity.x + mouseVelocity.y) * 0.0035, 0.5);
+        setter.x(smoothMouse.x); setter.y(smoothMouse.y);
+        setter.scaleY(1 - scaleAmount); setter.scaleX(1 + scaleAmount);
+        setter.rotation(angle); setter.wc('transform'); setter.textRotation(-angle);
+    });
+    window.addEventListener('scroll', () => {
+        const ws = document.body.scrollTop || document.documentElement.scrollTop;
+        const h  = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        document.getElementById("top-progress").style.width = (h > 0 ? (ws / h) * 100 : 0) + "%";
+    });
+
+    /* ── AST Tree ── */
+    const NODE_COLORS = {
+        'Program':         '#a78bfa',
+        'MainFunction':    '#818cf8',
+        'Declaration':     '#2dd4bf',
+        'Initialization':  '#2dd4bf',
+        'Assignment':      '#f472b6',
+        'IfStatement':     '#fb923c',
+        'IfElseStatement': '#fb923c',
+        'ForLoop':         '#4ade80',
+        'WhileLoop':       '#4ade80',
+        'DoWhileLoop':     '#4ade80',
+        'ReturnStatement': '#facc15',
+        'BinaryOp':        '#60a5fa',
+        'UnaryOp':         '#60a5fa',
+        'PrefixOp':        '#93c5fd',
+        'PostfixOp':       '#93c5fd',
+        'Identifier':      '#94a3b8',
+        'Number':          '#fb923c',
+        'Literal':         '#fbbf24',
+        'Type':            '#a78bfa',
+        'ReturnType':      '#a78bfa',
+        'Condition':       '#f97316',
+        'Then':            '#4ade80',
+        'Else':            '#f87171',
+        'Body':            '#64748b',
+        'Init':            '#64748b',
+        'Update':          '#64748b',
+    };
+
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;');
+    }
+
+    let nodeCount = 0;
+
+    function buildTree(node) {
+        if (!node || typeof node !== 'object' || !node.node_type) return '';
+        nodeCount++;
+        const kids = (node.children || []).filter(c => c && typeof c === 'object' && c.node_type);
+        const hasKids = kids.length > 0;
+        const color   = NODE_COLORS[node.node_type] || '#94a3b8';
+        const uid     = 'n' + nodeCount;
+
+        let html = `<div class="tree-node">`;
+
+        if (hasKids) {
+            html += `<div class="tree-label clickable" onclick="toggleNode('${uid}')">`;
+            html += `<span class="tree-arrow open" id="arr-${uid}">▾</span>`;
+        } else {
+            html += `<div class="tree-label">`;
+            html += `<span class="tree-leaf">•</span>`;
+        }
+
+        html += `<span class="tree-type" style="color:${color}">${escHtml(node.node_type)}</span>`;
+
+        if (node.value !== null && node.value !== undefined) {
+            html += ` <span class="tree-val">← <code>${escHtml(node.value)}</code></span>`;
+        }
+        if (node.line) {
+            html += ` <span class="tree-line">line ${node.line}</span>`;
+        }
+        html += `</div>`;
+
+        if (hasKids) {
+            html += `<div class="tree-children" id="${uid}">`;
+            for (const child of kids) {
+                html += buildTree(child);
+            }
+            html += `</div>`;
+        }
+
+        html += `</div>`;
+        return html;
+    }
+
+    function toggleNode(uid) {
+        const el  = document.getElementById(uid);
+        const arr = document.getElementById('arr-' + uid);
+        if (!el) return;
+        const open = el.style.display !== 'none';
+        el.style.display  = open ? 'none' : 'block';
+        arr.className = 'tree-arrow ' + (open ? 'shut' : 'open');
+    }
+
+    function expandAll() {
+        document.querySelectorAll('.tree-children').forEach(el => el.style.display = 'block');
+        document.querySelectorAll('.tree-arrow').forEach(el => { el.className = 'tree-arrow open'; });
+    }
+
+    function collapseAll() {
+        document.querySelectorAll('#ast-tree > .tree-node > .tree-children').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.querySelectorAll('#ast-tree > .tree-node > .tree-label .tree-arrow').forEach(el => {
+            el.className = 'tree-arrow shut';
+        });
+    }
+
+    const astData = {{ ast_json | safe }};
+    nodeCount = 0;
+    document.getElementById('ast-tree').innerHTML = buildTree(astData);
+    document.getElementById('tree-info').textContent = nodeCount + ' nodes in tree';
+</script>
+</body>
+</html>
