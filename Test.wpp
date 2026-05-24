@@ -1,0 +1,41 @@
+int main() {
+    int age = 25;
+    float temperature = 36.6;
+    double pi = 3.14159265359;
+    char grade = 'A';
+    string name = "John Doe";
+    int x = 10, y = 20, z = 30;
+    float a = 1.5, b = 2.5, c = 3.5;
+    int sum = x + y + z
+    float product = a * b * c;
+    double division = pi / 2.0;
+    int remainder = 100 % 7;
+    if (age >= 18 && age <= 60) {
+        print "Adult age range";
+        string status = "Working";
+    } else if (age > 60) {
+        print "Senior citizen";
+        string status = "Retired";
+    } else {
+        print "Minor";
+        string status = "Student";
+    }
+    int counter = 0;
+    while (counter < 10 {
+        counter = counter + 1;
+        print "Counter value: ";
+        print counter;
+    }
+    for (int i = 0; i < 5; i = i + 1) {
+        print "Iteration: ";
+        print i;
+    }
+    bool flag = true;
+    bool result = x + ;
+    char newline = 'x';
+    for (int k = 0 k < 3; k++) {
+        print k;
+    }
+    if (flag) print "yes";
+    return 0;
+}
